@@ -13,9 +13,10 @@ public class Philosopher
     private final ChopStick myLeftStick;
     private final ChopStick myRightStick;
     private boolean running = true;
+    private final String myName;
 
     public Philosopher(String name, ChopStick left, ChopStick right) {
-        super(name);
+        myName= name;
         myLeftStick = left;
         myRightStick = right;
     }
@@ -25,22 +26,28 @@ public class Philosopher
         while (running) {
             try {
                 think();
-                myLeftStick.take();
-                // think(); // Pour augmenter la probabilité d'interblocage
-                myRightStick.take();
-                // success : process
-                eat();
-                // release resources
-                myLeftStick.release();
-                myRightStick.release();
-                // try again
-            } catch (InterruptedException ex) {
-                Logger.getLogger("Table").log(Level.SEVERE, "{0} Interrupted", this.getName());
+                if (tryTakeStick(myLeftStick)) {
+                    if (tryTakeStick(myRightStick)) {
+                        // success : process
+                        eat();
+                        // release resources
+                        myLeftStick.release();
+                        myRightStick.release();
+                    } else {
+                            // failure : release resources
+                            releaseStick(myLeftStick);
+                        }
+                    }
+                    // try again
+                } catch (InterruptedException ex) {
+                    Logger.getLogger("Table").log(Level.SEVERE, "{0} Interrupted", this.getName());
+                }
             }
-        }
-    }
+            System.out.println(myName + " leaves table");
 
-    // Permet d'interrompre le philosophe "proprement" :
+        }
+
+        // Permet d'interrompre le philosophe "proprement" :
     // Il relachera ses baguettes avant de s'arrêter
     public void leaveTable() {
         running = false;
@@ -49,14 +56,35 @@ public class Philosopher
     private void think() throws InterruptedException {
         int delay = myRandom.nextInt(500 + DELAY);
         System.out.println(this.getName() + " Starts Thinking for: " + delay + " ms");
-        sleep(delay); // Le thread peut être interrompu ici
+        try {
+            sleep(delay);
+        } catch (InterruptedException ex) {
+        }
         System.out.println(this.getName() + " Stops Thinking");
     }
 
     private void eat() throws InterruptedException {
         int delay = myRandom.nextInt(100 + DELAY);
         System.out.println(this.getName() + " Starts Eating for:" + delay + " ms");
-        sleep(delay); // Le thread peut être interrompu ici
+        try {
+            sleep(delay);
+        } catch (InterruptedException ex) {
+        }
         System.out.println(this.getName() + " Stops Eating");
     }
+    private boolean tryTakeStick(ChopStick stick) throws InterruptedException {
+        int delay = myRandom.nextInt(100 + DELAY);
+        boolean result = stick.tryTake();
+        if (result) {
+            System.out.println(myName + " took " + stick + " before " + delay + " ms");
+        } else {
+            System.out.println(myName + " could not take " + stick + " before " + delay + " ms");
+        }
+        return result;
+    }
+    private void releaseStick(ChopStick stick) {
+        stick.release();
+        System.out.println(myName + " releases " + stick);
+    }
+
 }
